@@ -1,0 +1,11 @@
+policy_arn,policy_name,policy_action,policy_resource_action,attached_user,attached_group,attached_group_user,attached_all_user,attached_role
+arn:aws:iam::012345678901:policy/CloudFormationFullAccess,CloudFormationFullAccess,cloudformation:*,"{
+  ""actions"": [
+    ""cloudformation:*""
+  ],
+  ""resources"": [
+    ""*""
+  ]
+}",,developers,"foo
+bar","foo
+bar",
