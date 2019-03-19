@@ -1,17 +1,29 @@
 package main
 
 import (
-	"github.com/evalphobia/cloud-iam-policy-checker/checker"
+	"fmt"
+	"os"
+
+	"github.com/mkideal/cli"
 )
 
 func main() {
-	c, err := checker.New()
-	if err != nil {
-		panic(err)
+	if err := cli.Root(root,
+		cli.Tree(help),
+		cli.Tree(policy),
+		cli.Tree(inlinePolicy),
+	).Run(os.Args[1:]); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
 	}
+}
 
-	err = c.CheckPolicies()
-	if err != nil {
-		panic(err)
-	}
+var help = cli.HelpCommand("show help")
+
+// main command
+var root = &cli.Command{
+	Fn: func(ctx *cli.Context) error {
+		ctx.String(ctx.Command().Usage(ctx))
+		return nil
+	},
 }

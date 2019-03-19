@@ -46,24 +46,62 @@ $ make init
 $ make dep
 ```
 
-## Local command
-
-Build first,
+Then, create binary file.
 
 ```bash
 $ make build-local
 ```
 
-Then executes,
-
 ```bash
-$ bin/cloud-iam-policy-checker
+$ bin/cloud-iam-policy-checker -h
+
+Commands:
+
+  help            show help
+  policy          Get list of IAM policies
+  inline_policy   Get list of inline policies from User/Group/Role
 ```
 
-After a while, `output.csv` will be created in the directory.
+
+
+## Subcommands
+
+### policy
+
+`policy` command retrieves IAM policies including the statements and attached user/group/role.
+
 
 ```bash
-$ cat output.csv
+$ bin/cloud-iam-policy-checker policy -h
+
+Get list of IAM policies
+
+Options:
+
+  -h, --help                  display help information
+  -o, --output[=policy.csv]   output CSV/TSV file path (e.g. --output='./output.csv')
+  -r, --resource              filtering rule for resources; space separated (e.g. --resource='arn:aws:s3:* arn:aws:sns:*')
+  -a, --action                filtering rule for action; space separated (e.g. --action='S3:Get* SNS:* Delete')
+  -s, --service               filtering rule for action services; space separated (e.g. --service='s3 sns ecr')
+      --all                   do not use filtering and output all inline policy
+```
+
+For example, if you want all of the IAM policies,
+
+```bash
+$ bin/cloud-iam-policy-checker policy --all
+
+[Checker] [INFO] invoking `fetchAwsPolicies` ...
+[Checker] [INFO] invoking `fetchTargetPolicyWithBody` size:[1] ...
+[Checker] [INFO] invoking `fetchAndSetEntity` size:[1] ...
+[Checker] [INFO] invoking `fetchAndSetEntity` size:[1] ...
+[Checker] [INFO] invoking `savePolicies` size:[1] ...
+```
+
+After a while, `policy.csv` will be created in the directory.
+
+```bash
+$ cat policy.csv
 
 policy_arn,policy_name,policy_action,policy_resource_action,attached_user,attached_group,attached_group_user,attached_all_user,attached_role
 arn:aws:iam::012345678901:policy/CloudFormationFullAccess,CloudFormationFullAccess,cloudformation:*,"{
@@ -79,6 +117,57 @@ bar",
 ```
 
 
+### inline_policy
+
+`inline_policy` command retrieves inline policies from user/group/role.
+
+
+```bash
+$ bin/cloud-iam-policy-checker inline_policy -h
+
+Get list of inline policies from User/Group/Role
+
+Options:
+
+  -h, --help                         display help information
+  -o, --output[=inline_policy.csv]   output CSV/TSV file path (e.g. --output='./output.csv')
+  -r, --resource                     filtering rule for resources; space separated (e.g. --resource='arn:aws:s3:* arn:aws:sns:*')
+  -a, --action                       filtering rule for action; space separated (e.g. --action='S3:Get* SNS:*')
+  -s, --service                      filtering rule for action services; space separated (e.g. --service='s3 sns ecr')
+      --all                          do not use filtering and output all inline policy
+```
+
+For example, if you want the inline policies including `Create` and `Delete` type action,
+
+```bash
+$ bin/cloud-iam-policy-checker inline_policy -a "Create Delete"
+
+[Checker] [INFO] invoking `fetchUsers` ...
+[Checker] [INFO] invoking `fetchInlinePolicyFromUsers` size:[1] ...
+[Checker] [INFO] invoking `fetchGroups` ...
+[Checker] [INFO] invoking `fetchInlinePolicyFromGroups` size:[1] ...
+[Checker] [INFO] invoking `fetchRoles` ...
+[Checker] [INFO] invoking `fetchInlinePolicyFromRoles` size:[1] ...
+[Checker] [INFO] invoking `saveInlinePolicies` size:[1] ...
+```
+
+After a while, `inline_policy.csv` will be created in the directory.
+
+```bash
+$ cat inline_policy.csv
+
+entity_type,entity_name,policy_name,policy_action,policy_resource_action
+user,sns-user,sns-publush,SNS:Publish,"{
+  ""actions"": [
+    ""SQS:Delete*""
+  ],
+  ""resources"": [
+    ""arn:aws:sns:ap-northeast-1:012345678901:*""
+  ]
+}"
+```
+
+
 # Environment variables
 
 |Name|Description|
@@ -86,9 +175,9 @@ bar",
 | `AWS_ACCESS_KEY_ID` | AWS access key id |
 | `AWS_SECRET_ACCESS_KEY` | AWS secret access key |
 | `POLICY_CHECKER_OUTPUT_FILE` | Output file name (default: `output.csv`) |
-| `POLICY_CHECKER_TARGET_RESOURCE` | Target resource ARN (default: `*`) |
-| `POLICY_CHECKER_TARGET_ACTION` | Target action (default: `*`) |
-| `POLICY_CHECKER_TARGET_ACTION_SERVICE` | Target service in action. If set this, then target resource and action does not be used. You can set multiple services using comma. (e.g. `ec2,s3,kms`) |
+| `POLICY_CHECKER_TARGET_RESOURCE` | Target resource ARN. You can set multiple actions using space. (e.g. `arn:aws:sns:* arn:aws:sqs:*`) |
+| `POLICY_CHECKER_TARGET_ACTION` | Target action. You can set multiple actions using space. (e.g. `Get List Describe`) |
+| `POLICY_CHECKER_TARGET_ACTION_SERVICE` | Target service in action. If set this, then target resource and action does not be used. You can set multiple services using space. (e.g. `ec2 s3 kms`) |
 
 
 # AWS Permissions
@@ -99,5 +188,14 @@ This program needs these permissions.
 |:--|
 | `iam:GetGroup` |
 | `iam:GetPolicyVersion` |
+| `iam:GetUserPolicyDocument` |
+| `iam:GetGroupPolicyDocument` |
+| `iam:GetRolePolicyDocument` |
 | `iam:ListAttachedPolicies` |
 | `iam:ListEntitiesForPolicy` |
+| `iam:ListGroups` |
+| `iam:ListGroupPolicies` |
+| `iam:ListUsers` |
+| `iam:ListUserPolicies` |
+| `iam:ListRoles` |
+| `iam:ListRolePolicies` |

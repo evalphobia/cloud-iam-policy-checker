@@ -1,14 +1,14 @@
 package checker
 
 import (
+	"errors"
 	"os"
 	"strings"
 )
 
 const (
-	defaultOutputFile     = "output.csv"
-	defaultTargetResource = "*"
-	defaultTargetAction   = "*"
+	defaultSeparator  = " "
+	defaultOutputFile = "output.csv"
 
 	// enviroment parameters
 	envKeyOutputFile     = "POLICY_CHECKER_OUTPUT_FILE"
@@ -27,12 +27,27 @@ var (
 
 // Config contains settings.
 type Config struct {
-	OutputFile           string
-	TargetResource       string
-	TargetAction         string
-	TargetActionServices []string
+	OutputFile          string
+	TargetResource      string // space separated
+	TargetAction        string // space separated
+	TargetActionService string // space separated
+	ShowAllPolicy       bool
 
-	targetService *TargetService
+	targetResources []string
+	targetActions   []string
+	targetServices  *TargetService
+}
+
+// Validate validates config has valid rules or not.
+func (c Config) Validate() error {
+	switch {
+	case c.ShowAllPolicy,
+		c.TargetResource != "",
+		c.TargetAction != "",
+		c.TargetActionService != "":
+		return nil
+	}
+	return errors.New("Config does not contain valid rules")
 }
 
 // GetOutputFile gets output file name.
@@ -47,46 +62,62 @@ func (c Config) GetOutputFile() string {
 	}
 }
 
-// GetTargetResource gets filter rule for policy resource.
-func (c Config) GetTargetResource() string {
-	switch {
-	case c.TargetResource != "":
-		return c.TargetResource
-	case envValueTargetResource != "":
-		return envValueTargetResource
-	default:
-		return defaultTargetResource
+// GetTargetResources gets filter rule for policy resource.
+func (c *Config) GetTargetResources() []string {
+	if c.targetResources != nil {
+		return c.targetResources
 	}
+
+	c.targetResources = toStringList(c.TargetResource, envValueTargetResource)
+	return c.targetResources
 }
 
-// GetTargetAction gets filter rule for policy action.
-func (c Config) GetTargetAction() string {
-	switch {
-	case c.TargetAction != "":
-		return c.TargetAction
-	case envValueTargetAction != "":
-		return envValueTargetAction
-	default:
-		return defaultTargetAction
+// GetTargetActions gets filter rule for policy action.
+func (c *Config) GetTargetActions() []string {
+	if c.targetActions != nil {
+		return c.targetActions
 	}
+
+	c.targetActions = toStringList(c.TargetAction, envValueTargetAction)
+	return c.targetActions
 }
 
-// GetTargetActionService gets filter rule for services in policy action.
-func (c *Config) GetTargetActionService() *TargetService {
-	if c.targetService != nil {
-		return c.targetService
+// GetTargetActionServices gets filter rule for services in policy action.
+func (c *Config) GetTargetActionServices() *TargetService {
+	if c.targetServices != nil {
+		return c.targetServices
 	}
 
-	var svc TargetService
-	switch {
-	case len(c.TargetActionServices) != 0:
-		svc = newTargetService(c.TargetActionServices)
-	case envValueTargetActionService != "":
-		svc = newTargetService(strings.Split(envValueTargetActionService, ","))
-	default:
+	list := toStringList(c.TargetActionService, envValueTargetActionService)
+	if len(list) == 0 {
 		return &TargetService{}
 	}
 
-	c.targetService = &svc
-	return c.targetService
+	svc := newTargetService(list)
+	c.targetServices = &svc
+	return c.targetServices
+}
+
+func toStringList(inputs ...string) []string {
+	result := make([]string, 0)
+
+	var list []string
+	for _, input := range inputs {
+		if input == "" {
+			continue
+		}
+
+		list = strings.Split(input, defaultSeparator)
+		break
+	}
+
+	// trim vervose spaces
+	for _, s := range list {
+		s = strings.TrimSpace(s)
+		if s == "" {
+			continue
+		}
+		result = append(result, s)
+	}
+	return result
 }
