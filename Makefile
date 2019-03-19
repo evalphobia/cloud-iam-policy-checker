@@ -7,4 +7,4 @@ dep:
 	dep ensure -v
 
 build-local:
-	go build -o bin/cloud-iam-policy-checker cmd/local/main.go
+	go build -o bin/cloud-iam-policy-checker ./cmd/local

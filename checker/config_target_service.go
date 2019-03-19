@@ -10,8 +10,12 @@ type TargetService struct {
 }
 
 func newTargetService(services []string) TargetService {
-	m := make(map[string]interface{}, len(services))
+	m := make(map[string]interface{})
 	for _, v := range services {
+		v = strings.TrimSpace(v)
+		if v == "" {
+			continue
+		}
 		m[v] = struct{}{}
 	}
 

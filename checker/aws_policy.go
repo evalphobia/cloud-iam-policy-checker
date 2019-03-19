@@ -2,23 +2,15 @@ package checker
 
 import (
 	"encoding/json"
-	"strings"
 
 	"github.com/evalphobia/aws-sdk-go-wrapper/iam"
 )
 
-// CSV headers
-var defaultHeaders = []string{
-	"policy_arn",
-	"policy_name",
-	"policy_action",
-	"policy_resource_action",
-	"attached_user",
-	"attached_group",
-	"attached_group_user",
-	"attached_all_user",
-	"attached_role",
-}
+const (
+	entityUser  = "user"
+	entityGroup = "group"
+	entityRole  = "role"
+)
 
 // AwsPolicy contains aws policy data.
 type AwsPolicy struct {
@@ -35,18 +27,16 @@ type AwsPolicy struct {
 	AttachedRoles      []string
 }
 
-// SliceString returns []string for CSV row output.
-func (p *AwsPolicy) SliceString() []string {
-	return []string{
-		p.ARN,
-		p.PolicyName,
-		strings.Join(p.PolicyActions, "\n"),
-		strings.Join(GetResourceAndAction(p.PolicyResourceActions), "\n"),
-		strings.Join(p.AttachedUsers, "\n"),
-		strings.Join(GetGroupNames(p.AttachedGroups), "\n"),
-		strings.Join(p.AttachedGroupUsers, "\n"),
-		strings.Join(p.AttachedAllUsers, "\n"),
-		strings.Join(p.AttachedRoles, "\n"),
+func (p AwsPolicy) GetEntityAndType() (typ string, entities []string) {
+	switch {
+	case len(p.AttachedUsers) != 0:
+		return entityUser, p.AttachedUsers
+	case len(p.AttachedGroups) != 0:
+		return entityGroup, GetGroupNames(p.AttachedGroups)
+	case len(p.AttachedRoles) != 0:
+		return entityRole, p.AttachedRoles
+	default:
+		return "", nil
 	}
 }
 
@@ -78,14 +68,6 @@ func (p *AwsPolicy) SetEntityList(list []iam.PolicyEntity) {
 		}
 		list[i] = e
 	}
-}
-
-func toSliceForOutpout(list []*AwsPolicy) [][]string {
-	lines := make([][]string, len(list))
-	for i, p := range list {
-		lines[i] = p.SliceString()
-	}
-	return lines
 }
 
 // Group contains group name and users.
